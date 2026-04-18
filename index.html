@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResumeForge – Drag & Drop Resume Builder</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0F172A;
+    --ink: #1E293B;
+    --teal: #0D9488;
+    --teal-light: #14B8A6;
+    --gold: #F59E0B;
+    --mist: #F8FAFC;
+    --silver: #CBD5E1;
+    --smoke: #64748B;
+    --white: #FFFFFF;
+    --danger: #EF4444;
+    --card: #FFFFFF;
+    --sidebar-w: 300px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0F172A;
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── TOPBAR ─── */
+  .topbar {
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+    border-bottom: 1px solid rgba(13,148,136,0.3);
+    padding: 0 1.5rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    color: var(--white);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--teal); }
+  .topbar-actions { display: flex; gap: 0.75rem; align-items: center; }
+  .btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn-ghost {
+    background: rgba(255,255,255,0.08);
+    color: var(--silver);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.14); color: white; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--teal) 0%, #0891B2 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(13,148,136,0.4);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13,148,136,0.5); }
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold) 0%, #D97706 100%);
+    color: #1a1a1a;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(245,158,11,0.35);
+  }
+  .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,158,11,0.5); }
+
+  /* ─── LAYOUT ─── */
+  .workspace {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: #1E293B;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 1rem;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--smoke);
+    margin: 1rem 0 0.5rem;
+  }
+
+  /* blocks palette */
+  .block-item {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: grab;
+    margin-bottom: 0.5rem;
+    color: var(--silver);
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .block-item:hover {
+    background: rgba(13,148,136,0.15);
+    border-color: rgba(13,148,136,0.4);
+    color: white;
+    transform: translateX(2px);
+  }
+  .block-icon { font-size: 1.1rem; width: 24px; text-align: center; }
+
+  /* template cards */
+  .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .template-card {
+    border-radius: 8px;
+    padding: 0.5rem;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    background: rgba(255,255,255,0.04);
+  }
+  .template-card.active { border-color: var(--teal); background: rgba(13,148,136,0.15); }
+  .template-card:hover { border-color: rgba(13,148,136,0.5); }
+  .template-thumb {
+    height: 60px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px;
+    margin-bottom: 0.35rem;
+  }
+  .template-thumb .t-line { height: 5px; border-radius: 2px; }
+  .template-name { font-size: 0.7rem; color: var(--silver); text-align: center; }
+
+  /* color picker */
+  .color-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .color-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .color-dot.active, .color-dot:hover { border-color: white; transform: scale(1.15); }
+
+  /* font picker */
+  .font-btn {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 0.6rem;
+    color: var(--silver);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    margin-bottom: 0.4rem;
+  }
+  .font-btn:hover, .font-btn.active {
+    background: rgba(13,148,136,0.15);
+    border-color: rgba(13,148,136,0.4);
+    color: white;
+  }
+
+  /* ─── CANVAS AREA ─── */
+  .canvas-area {
+    flex: 1;
+    overflow-y: auto;
+    background: #0F172A;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2rem;
+  }
+  .canvas-area::-webkit-scrollbar { width: 6px; }
+  .canvas-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  /* ─── RESUME PAPER ─── */
+  #resume-paper {
+    width: 794px;
+    min-height: 1123px;
+    background: white;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+    position: relative;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  /* ─── RESUME TEMPLATES ─── */
+  /* Template: Classic */
+  .resume-classic .resume-header {
+    background: #1E3A5F;
+    padding: 2rem 2.5rem;
+    color: white;
+  }
+  .resume-classic .resume-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .resume-classic .resume-title {
+    font-size: 0.95rem;
+    opacity: 0.8;
+    margin-bottom: 0.75rem;
+  }
+  .resume-classic .resume-contacts {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    font-size: 0.8rem; opacity: 0.75;
+  }
+
+  /* Template: Modern */
+  .resume-modern .resume-header {
+    background: linear-gradient(135deg, #0D9488, #0891B2);
+    padding: 2rem 2.5rem;
+    color: white;
+  }
+  .resume-modern .resume-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.2rem;
+    letter-spacing: -1px;
+    margin-bottom: 0.2rem;
+  }
+  .resume-modern .resume-title { font-size: 1rem; opacity: 0.85; margin-bottom: 0.75rem; }
+  .resume-modern .resume-contacts {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    font-size: 0.78rem; opacity: 0.8;
+  }
+
+  /* Template: Minimal */
+  .resume-minimal .resume-header {
+    padding: 2.5rem 2.5rem 1rem;
+    border-bottom: 3px solid #0D9488;
+  }
+  .resume-minimal .resume-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.4rem;
+    color: #0F172A;
+    letter-spacing: -1px;
+  }
+  .resume-minimal .resume-title {
+    font-size: 1rem;
+    color: #64748B;
+    margin: 0.25rem 0 0.75rem;
+  }
+  .resume-minimal .resume-contacts {
+    display: flex; gap: 1.5rem;
+    font-size: 0.8rem;
+    color: #64748B;
+  }
+
+  /* Template: Executive */
+  .resume-executive .resume-header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0;
+  }
+  .resume-executive .resume-sidebar-header {
+    width: 200px;
+    background: #1a1a2e;
+    padding: 2rem 1.5rem;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .resume-executive .resume-main-header {
+    background: #16213E;
+    padding: 2rem 2rem;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .resume-executive .resume-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: white;
+  }
+  .resume-executive .resume-title { color: rgba(255,255,255,0.7); font-size: 0.9rem; margin: 0.25rem 0; }
+  .resume-executive .resume-contacts { font-size: 0.78rem; color: rgba(255,255,255,0.6); }
+
+  /* ─── BODY SECTIONS ─── */
+  .resume-body {
+    padding: 1.5rem 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .resume-section {
+    margin-bottom: 0.1rem;
+    position: relative;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .resume-section.drag-over {
+    background: rgba(13,148,136,0.08);
+    outline: 2px dashed #0D9488;
+    outline-offset: 2px;
+  }
+  .resume-section:hover .section-controls { opacity: 1; }
+
+  .section-controls {
+    position: absolute;
+    right: -40px;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 10;
+  }
+  .section-ctrl-btn {
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    background: #1E293B;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .section-ctrl-btn:hover { background: var(--teal); }
+  .section-ctrl-btn.del:hover { background: var(--danger); }
+
+  /* editable elements */
+  [contenteditable] {
+    outline: none;
+    border-radius: 3px;
+    transition: background 0.15s;
+  }
+  [contenteditable]:focus {
+    background: rgba(13,148,136,0.08) !important;
+    outline: 1px dashed #0D9488;
+  }
+  [contenteditable]:empty:before {
+    content: attr(placeholder);
+    color: #CBD5E1;
+    pointer-events: none;
+  }
+
+  /* Section heading */
+  .sec-heading {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 0.6rem 0 0.3rem;
+    border-bottom: 2px solid currentColor;
+    margin-bottom: 0.75rem;
+    cursor: text;
+  }
+
+  /* Entry block */
+  .entry-block {
+    margin-bottom: 0.9rem;
+    padding: 0.6rem 0.4rem;
+    border-left: 3px solid transparent;
+    transition: border-color 0.2s;
+    position: relative;
+  }
+  .entry-block:hover { border-color: rgba(13,148,136,0.4); }
+  .entry-block .e-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1E293B;
+  }
+  .entry-block .e-sub {
+    font-size: 0.85rem;
+    color: #475569;
+    margin: 0.1rem 0;
+  }
+  .entry-block .e-date {
+    font-size: 0.8rem;
+    color: #94A3B8;
+    margin-bottom: 0.3rem;
+  }
+  .entry-block .e-desc {
+    font-size: 0.85rem;
+    color: #475569;
+    line-height: 1.5;
+    min-height: 1.5em;
+  }
+  .entry-block .delete-entry {
+    position: absolute;
+    right: 4px; top: 4px;
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    background: #EF4444;
+    color: white;
+    font-size: 0.7rem;
+    border: none;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .entry-block:hover .delete-entry { display: flex; }
+
+  /* Skills chips */
+  .skills-cloud { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.25rem 0; }
+  .skill-chip {
+    background: rgba(13,148,136,0.1);
+    color: #0D9488;
+    border: 1px solid rgba(13,148,136,0.25);
+    padding: 0.25rem 0.75rem;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    cursor: text;
+    min-width: 40px;
+    transition: all 0.2s;
+  }
+  .skill-chip:hover { background: rgba(13,148,136,0.2); }
+  .add-skill-btn {
+    padding: 0.25rem 0.75rem;
+    border-radius: 100px;
+    border: 1px dashed #94A3B8;
+    background: none;
+    color: #94A3B8;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .add-skill-btn:hover { border-color: #0D9488; color: #0D9488; }
+
+  /* Summary box */
+  .summary-text {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.65;
+    padding: 0.4rem;
+    min-height: 2em;
+  }
+
+  /* Add entry btn */
+  .add-entry-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    background: rgba(13,148,136,0.08);
+    border: 1px dashed rgba(13,148,136,0.4);
+    border-radius: 8px;
+    color: #0D9488;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 0.25rem;
+  }
+  .add-entry-btn:hover { background: rgba(13,148,136,0.15); }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    color: rgba(255,255,255,0.2);
+    font-size: 0.85rem;
+    margin-top: 1rem;
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .drop-zone.drag-active {
+    border-color: var(--teal);
+    background: rgba(13,148,136,0.1);
+    color: var(--teal);
+  }
+
+  /* Progress indicator */
+  .progress-bar {
+    height: 3px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--teal), #0891B2);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+  .progress-label {
+    font-size: 0.72rem;
+    color: var(--smoke);
+    text-align: right;
+    margin-top: 0.25rem;
+  }
+
+  /* Completeness score */
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(13,148,136,0.15);
+    border: 1px solid rgba(13,148,136,0.3);
+    border-radius: 20px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--teal-light);
+    font-weight: 500;
+  }
+
+  /* Photo circle */
+  .photo-circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    cursor: pointer;
+    margin: 0 auto 0.75rem;
+    border: 2px dashed rgba(255,255,255,0.3);
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+  .photo-circle:hover { border-color: var(--teal); }
+  .photo-circle img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* notification toast */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: #0D9488;
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 9999;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ─── PRINT STYLES ─── */
+  @media print {
+    body { background: white !important; }
+    .topbar, .sidebar, .canvas-area { display: block; }
+    .workspace { display: block; }
+    #resume-paper { box-shadow: none; width: 100%; }
+    .section-controls, .add-entry-btn, .add-skill-btn { display: none !important; }
+    .delete-entry { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">Resume<span>Forge</span> ✦</div>
+  <div style="display:flex;align-items:center;gap:1rem;">
+    <div class="score-badge" id="score-badge">✦ Score: 0%</div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" onclick="clearAll()">🗑 Clear</button>
+      <button class="btn btn-ghost" onclick="saveLocal()">💾 Save</button>
+      <button class="btn btn-gold" onclick="exportPDF()">⬇ Export PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="workspace">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="section-label">📐 Templates</div>
+    <div class="template-grid">
+      <div class="template-card active" onclick="setTemplate('classic')" id="tpl-classic">
+        <div class="template-thumb" style="background:#EFF6FF">
+          <div class="t-line" style="background:#1E3A5F;width:80%"></div>
+          <div class="t-line" style="background:#94A3B8;width:60%"></div>
+          <div class="t-line" style="background:#CBD5E1;width:90%"></div>
+          <div class="t-line" style="background:#E2E8F0;width:75%"></div>
+        </div>
+        <div class="template-name">Classic</div>
+      </div>
+      <div class="template-card" onclick="setTemplate('modern')" id="tpl-modern">
+        <div class="template-thumb" style="background:linear-gradient(#0D9488,#0891B2);padding:4px">
+          <div class="t-line" style="background:white;width:70%;opacity:0.9"></div>
+          <div class="t-line" style="background:rgba(255,255,255,0.5);width:50%"></div>
+        </div>
+        <div class="template-name">Modern</div>
+      </div>
+      <div class="template-card" onclick="setTemplate('minimal')" id="tpl-minimal">
+        <div class="template-thumb" style="background:#FAFAFA;border:1px solid #E2E8F0">
+          <div class="t-line" style="background:#0F172A;width:75%;height:7px"></div>
+          <div class="t-line" style="background:#0D9488;width:40%"></div>
+          <div class="t-line" style="background:#E2E8F0;width:90%"></div>
+          <div class="t-line" style="background:#E2E8F0;width:80%"></div>
+        </div>
+        <div class="template-name">Minimal</div>
+      </div>
+      <div class="template-card" onclick="setTemplate('executive')" id="tpl-executive">
+        <div class="template-thumb" style="background:#16213E">
+          <div class="t-line" style="background:white;width:60%;opacity:0.8"></div>
+          <div class="t-line" style="background:rgba(255,255,255,0.4);width:40%"></div>
+        </div>
+        <div class="template-name">Executive</div>
+      </div>
+    </div>
+
+    <div class="section-label">🎨 Accent Color</div>
+    <div class="color-row">
+      <div class="color-dot active" style="background:#0D9488" onclick="setAccent('#0D9488',this)" title="Teal"></div>
+      <div class="color-dot" style="background:#1E3A5F" onclick="setAccent('#1E3A5F',this)" title="Navy"></div>
+      <div class="color-dot" style="background:#7C3AED" onclick="setAccent('#7C3AED',this)" title="Purple"></div>
+      <div class="color-dot" style="background:#DC2626" onclick="setAccent('#DC2626',this)" title="Red"></div>
+      <div class="color-dot" style="background:#D97706" onclick="setAccent('#D97706',this)" title="Amber"></div>
+      <div class="color-dot" style="background:#059669" onclick="setAccent('#059669',this)" title="Green"></div>
+      <div class="color-dot" style="background:#0284C7" onclick="setAccent('#0284C7',this)" title="Blue"></div>
+      <div class="color-dot" style="background:#BE185D" onclick="setAccent('#BE185D',this)" title="Pink"></div>
+    </div>
+
+    <div class="section-label">🔤 Font Style</div>
+    <button class="font-btn active" onclick="setFont('DM Sans',this)">DM Sans — Clean & Modern</button>
+    <button class="font-btn" onclick="setFont('Georgia',this)">Georgia — Classic Elegance</button>
+    <button class="font-btn" onclick="setFont('Trebuchet MS',this)">Trebuchet — Bold & Sharp</button>
+    <button class="font-btn" onclick="setFont('Garamond',this)">Garamond — Literary Feel</button>
+
+    <div class="section-label">➕ Add Sections</div>
+    <div id="blocks-palette">
+      <div class="block-item" draggable="true" data-block="experience" ondragstart="dragStart(event)">
+        <span class="block-icon">💼</span> Work Experience
+      </div>
+      <div class="block-item" draggable="true" data-block="education" ondragstart="dragStart(event)">
+        <span class="block-icon">🎓</span> Education
+      </div>
+      <div class="block-item" draggable="true" data-block="skills" ondragstart="dragStart(event)">
+        <span class="block-icon">⚡</span> Skills
+      </div>
+      <div class="block-item" draggable="true" data-block="projects" ondragstart="dragStart(event)">
+        <span class="block-icon">🚀</span> Projects
+      </div>
+      <div class="block-item" draggable="true" data-block="certifications" ondragstart="dragStart(event)">
+        <span class="block-icon">🏆</span> Certifications
+      </div>
+      <div class="block-item" draggable="true" data-block="languages" ondragstart="dragStart(event)">
+        <span class="block-icon">🌐</span> Languages
+      </div>
+      <div class="block-item" draggable="true" data-block="summary" ondragstart="dragStart(event)">
+        <span class="block-icon">📝</span> Summary
+      </div>
+      <div class="block-item" draggable="true" data-block="links" ondragstart="dragStart(event)">
+        <span class="block-icon">🔗</span> Links & Portfolio
+      </div>
+    </div>
+
+    <div class="section-label">📊 Completeness</div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="prog-label">0% complete</div>
+
+    <div class="drop-zone" id="sidebar-drop"
+      ondragover="event.preventDefault();this.classList.add('drag-active')"
+      ondragleave="this.classList.remove('drag-active')"
+      ondrop="dropSection(event)">
+      ↓ Drop block here to add to resume
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+    <div id="resume-paper" class="resume-classic">
+
+      <!-- HEADER -->
+      <div class="resume-header" id="resume-header">
+        <div class="resume-name" contenteditable="true" placeholder="Your Full Name">Alex Johnson</div>
+        <div class="resume-title" contenteditable="true" placeholder="Your Professional Title">Senior Product Designer</div>
+        <div class="resume-contacts">
+          <span contenteditable="true" placeholder="📧 email">📧 alex@email.com</span>
+          <span contenteditable="true" placeholder="📞 phone">📞 +91 98765 43210</span>
+          <span contenteditable="true" placeholder="📍 location">📍 Kolkata, India</span>
+          <span contenteditable="true" placeholder="🔗 linkedin">🔗 linkedin.com/in/alex</span>
+        </div>
+      </div>
+
+      <!-- BODY -->
+      <div class="resume-body" id="resume-body"
+        ondragover="event.preventDefault()"
+        ondrop="dropSection(event)">
+
+        <!-- EXPERIENCE (default) -->
+        <div class="resume-section" id="sec-experience" draggable="true"
+          ondragstart="sectionDragStart(event)" ondragover="sectionDragOver(event)" ondragend="sectionDragEnd(event)">
+          <div class="section-controls">
+            <button class="section-ctrl-btn" onclick="moveSection(this,'up')" title="Move up">↑</button>
+            <button class="section-ctrl-btn" onclick="moveSection(this,'down')" title="Move down">↓</button>
+            <button class="section-ctrl-btn del" onclick="deleteSection(this)" title="Delete">✕</button>
+          </div>
+          <div class="sec-heading" contenteditable="true" style="color:var(--accent,#0D9488);border-color:var(--accent,#0D9488)">EXPERIENCE</div>
+          <div class="entries">
+            <div class="entry-block">
+              <button class="delete-entry" onclick="this.parentElement.remove();updateScore()">✕</button>
+              <div class="e-title" contenteditable="true" placeholder="Job Title">Lead UX Designer</div>
+              <div class="e-sub" contenteditable="true" placeholder="Company | Location">TechCorp Inc · Bangalore, India</div>
+              <div class="e-date" contenteditable="true" placeholder="Start – End">Jan 2022 – Present</div>
+              <div class="e-desc" contenteditable="true" placeholder="Describe your role and achievements...">Led end-to-end design of a SaaS dashboard, improving user retention by 40%. Collaborated with cross-functional teams across 3 time zones.</div>
+            </div>
+          </div>
+          <button class="add-entry-btn" onclick="addEntry(this,'experience')">+ Add Entry</button>
+        </div>
+
+        <!-- EDUCATION (default) -->
+        <div class="resume-section" id="sec-education" draggable="true"
+          ondragstart="sectionDragStart(event)" ondragover="sectionDragOver(event)" ondragend="sectionDragEnd(event)">
+          <div class="section-controls">
+            <button class="section-ctrl-btn" onclick="moveSection(this,'up')">↑</button>
+            <button class="section-ctrl-btn" onclick="moveSection(this,'down')">↓</button>
+            <button class="section-ctrl-btn del" onclick="deleteSection(this)">✕</button>
+          </div>
+          <div class="sec-heading" contenteditable="true" style="color:var(--accent,#0D9488);border-color:var(--accent,#0D9488)">EDUCATION</div>
+          <div class="entries">
+            <div class="entry-block">
+              <button class="delete-entry" onclick="this.parentElement.remove();updateScore()">✕</button>
+              <div class="e-title" contenteditable="true">B.Tech in Computer Science</div>
+              <div class="e-sub" contenteditable="true">Jadavpur University · Kolkata</div>
+              <div class="e-date" contenteditable="true">2018 – 2022 · CGPA: 8.7</div>
+              <div class="e-desc" contenteditable="true">Relevant coursework: Algorithms, UI/UX Design, Machine Learning</div>
+            </div>
+          </div>
+          <button class="add-entry-btn" onclick="addEntry(this,'education')">+ Add Entry</button>
+        </div>
+
+        <!-- SKILLS (default) -->
+        <div class="resume-section" id="sec-skills" draggable="true"
+          ondragstart="sectionDragStart(event)" ondragover="sectionDragOver(event)" ondragend="sectionDragEnd(event)">
+          <div class="section-controls">
+            <button class="section-ctrl-btn" onclick="moveSection(this,'up')">↑</button>
+            <button class="section-ctrl-btn" onclick="moveSection(this,'down')">↓</button>
+            <button class="section-ctrl-btn del" onclick="deleteSection(this)">✕</button>
+          </div>
+          <div class="sec-heading" contenteditable="true" style="color:var(--accent,#0D9488);border-color:var(--accent,#0D9488)">SKILLS</div>
+          <div class="skills-cloud" id="skills-container">
+            <span class="skill-chip" contenteditable="true">Figma</span>
+            <span class="skill-chip" contenteditable="true">React</span>
+            <span class="skill-chip" contenteditable="true">Python</span>
+            <span class="skill-chip" contenteditable="true">JavaScript</span>
+            <span class="skill-chip" contenteditable="true">UI/UX Design</span>
+            <span class="skill-chip" contenteditable="true">SQL</span>
+          </div>
+          <button class="add-skill-btn" onclick="addSkill(this)">+ Skill</button>
+        </div>
+
+      </div><!-- /resume-body -->
+    </div><!-- /resume-paper -->
+  </div><!-- /canvas-area -->
+</div><!-- /workspace -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+let currentTemplate = 'classic';
+let accentColor = '#0D9488';
+let bodyFont = 'DM Sans';
+let dragSrcEl = null;
+let dragBlockType = null;
+
+// ─── TEMPLATE SWITCHING ───
+function setTemplate(name) {
+  document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('tpl-'+name).classList.add('active');
+  const paper = document.getElementById('resume-paper');
+  paper.className = 'resume-' + name;
+  currentTemplate = name;
+  applyAccent();
+  showToast('Template changed: '+name.charAt(0).toUpperCase()+name.slice(1));
+}
+
+// ─── ACCENT COLOR ───
+function setAccent(color, el) {
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+  el.classList.add('active');
+  accentColor = color;
+  applyAccent();
+}
+
+function applyAccent() {
+  // Update CSS variable
+  document.documentElement.style.setProperty('--accent', accentColor);
+  // Update all section headings
+  document.querySelectorAll('.sec-heading').forEach(h => {
+    h.style.color = accentColor;
+    h.style.borderColor = accentColor;
+  });
+  document.querySelectorAll('.skill-chip').forEach(c => {
+    c.style.color = accentColor;
+    c.style.borderColor = accentColor + '40';
+    c.style.background = accentColor + '18';
+  });
+  document.querySelectorAll('.add-entry-btn').forEach(b => {
+    b.style.color = accentColor;
+    b.style.borderColor = accentColor + '60';
+    b.style.background = accentColor + '10';
+  });
+  // header background for classic/modern/executive
+  const header = document.querySelector('.resume-header');
+  if (header && (currentTemplate === 'classic' || currentTemplate === 'modern')) {
+    header.style.background = accentColor;
+  }
+}
+
+// ─── FONT ───
+function setFont(font, el) {
+  document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  bodyFont = font;
+  document.getElementById('resume-paper').style.fontFamily = font + ', sans-serif';
+}
+
+// ─── DRAG FROM PALETTE ───
+function dragStart(e) {
+  dragBlockType = e.currentTarget.dataset.block;
+  e.dataTransfer.effectAllowed = 'copy';
+}
+
+function dropSection(e) {
+  e.preventDefault();
+  document.getElementById('sidebar-drop').classList.remove('drag-active');
+  if (dragBlockType) {
+    addSection(dragBlockType);
+    dragBlockType = null;
+  } else if (dragSrcEl) {
+    // section reorder handled by sectionDragEnd
+  }
+}
+
+// ─── ADD SECTION ───
+const sectionTemplates = {
+  experience: {
+    title: 'EXPERIENCE',
+    html: `<div class="entries">
+      <div class="entry-block">
+        <button class="delete-entry" onclick="this.parentElement.remove();updateScore()">✕</button>
+        <div class="e-title" contenteditable="true" placeholder="Job Title">Job Title</div>
+        <div class="e-sub" contenteditable="true" placeholder="Company | Location">Company · Location</div>
+        <div class="e-date" contenteditable="true" placeholder="Start – End">Start – End</div>
+        <div class="e-desc" contenteditable="true" placeholder="Describe your achievements...">Describe your key achievements and responsibilities here.</div>
+      </div>
+    </div>
+    <button class="add-entry-btn" onclick="addEntry(this,'experience')">+ Add Entry</button>`
+  },
+  education: {
+    title: 'EDUCATION',
+    html: `<div class="entries">
+      <div class="entry-block">
+        <button class="delete-entry" onclick="this.parentElement.remove();updateScore()">✕</button>
+        <div class="e-title" contenteditable="true">Degree / Qualification</div>
+        <div class="e-sub" contenteditable="true">Institution · Location</div>
+        <div class="e-date" contenteditable="true">Year – Year</div>
+        <div class="e-desc" contenteditable="true">Relevant details, GPA, honors, activities</div>
+      </div>
+    </div>
+    <button class="add-entry-btn" onclick="addEntry(this,'education')">+ Add Entry</button>`
+  },
+  skills: {
+    title: 'SKILLS',
+    html: `<div class="skills-cloud">
+      <span class="skill-chip" contenteditable="true" style="color:${accentColor}">Skill 1</span>
+      <span class="skill-chip" contenteditable="true" style="color:${accentColor}">Skill 2</span>
+    </div>
+    <button class="add-skill-btn" onclick="addSkill(this)">+ Skill</button>`
+  },
+  projects: {
+    title: 'PROJECTS',
+    html: `<div class="entries">
+      <div class="entry-block">
+        <button class="delete-entry" onclick="this.parentElement.remove();updateScore()">✕</button>
+        <div class="e-title" contenteditable="true">Project Name</div>
+        <div class="e-sub" contenteditable="true">Technologies used</div>
+        <div class="e-date" contenteditable="true">Month Year</div>
+        <div class="e-desc" contenteditable="true">Brief description of the project, your role, and impact.</div>
+      </div>
+    </div>
+    <button class="add-entry-btn" onclick="addEntry(this,'projects')">+ Add Project</button>`
+  },
+  certifications: {
+    title: 'CERTIFICATIONS',
+    html: `<div class="entries">
+      <div class="entry-block">
+        <button class="delete-entry" onclick="this.parentElement.remove();updateScore()">✕</button>
+        <div class="e-title" contenteditable="true">Certificate Name</div>
+        <div class="e-sub" contenteditable="true">Issuing Organization</div>
+        <div class="e-date" contenteditable="true">Issue Date · Credential ID</div>
+      </div>
+    </div>
+    <button class="add-entry-btn" onclick="addEntry(this,'certifications')">+ Add Certification</button>`
+  },
+  languages: {
+    title: 'LANGUAGES',
+    html: `<div class="skills-cloud">
+      <span class="skill-chip" contenteditable="true" style="color:${accentColor}">English (Fluent)</span>
+      <span class="skill-chip" contenteditable="true" style="color:${accentColor}">Hindi (Native)</span>
+    </div>
+    <button class="add-skill-btn" onclick="addSkill(this)">+ Language</button>`
+  },
+  summary: {
+    title: 'PROFESSIONAL SUMMARY',
+    html: `<div class="summary-text" contenteditable="true" placeholder="Write a compelling 2-3 sentence summary of your professional background, key skills, and career goals...">Passionate and results-driven professional with X years of experience in [field]. Proven track record in delivering [key outcomes]. Seeking to contribute expertise to [target role/industry].</div>`
+  },
+  links: {
+    title: 'LINKS & PORTFOLIO',
+    html: `<div class="entries">
+      <div class="entry-block" style="border-left:3px solid ${accentColor}40">
+        <button class="delete-entry" onclick="this.parentElement.remove()">✕</button>
+        <div class="e-title" contenteditable="true">🔗 Portfolio</div>
+        <div class="e-desc" contenteditable="true">https://yourportfolio.com</div>
+      </div>
+      <div class="entry-block" style="border-left:3px solid ${accentColor}40">
+        <button class="delete-entry" onclick="this.parentElement.remove()">✕</button>
+        <div class="e-title" contenteditable="true">💻 GitHub</div>
+        <div class="e-desc" contenteditable="true">github.com/yourusername</div>
+      </div>
+    </div>`
+  }
+};
+
+function addSection(type) {
+  const existing = document.getElementById('sec-'+type);
+  if (existing) { showToast('Section already exists!', 'warn'); return; }
+
+  const tpl = sectionTemplates[type];
+  if (!tpl) return;
+
+  const div = document.createElement('div');
+  div.className = 'resume-section';
+  div.id = 'sec-' + type;
+  div.draggable = true;
+  div.setAttribute('ondragstart','sectionDragStart(event)');
+  div.setAttribute('ondragover','sectionDragOver(event)');
+  div.setAttribute('ondragend','sectionDragEnd(event)');
+
+  div.innerHTML = `
+    <div class="section-controls">
+      <button class="section-ctrl-btn" onclick="moveSection(this,'up')">↑</button>
+      <button class="section-ctrl-btn" onclick="moveSection(this,'down')">↓</button>
+      <button class="section-ctrl-btn del" onclick="deleteSection(this)">✕</button>
+    </div>
+    <div class="sec-heading" contenteditable="true" style="color:${accentColor};border-color:${accentColor}">${tpl.title}</div>
+    ${tpl.html}
+  `;
+
+  document.getElementById('resume-body').appendChild(div);
+  applyAccent();
+  updateScore();
+  showToast('Section added: '+tpl.title);
+  div.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+// ─── ADD ENTRY ───
+function addEntry(btn, type) {
+  const section = btn.closest('.resume-section');
+  const entries = section.querySelector('.entries');
+  const div = document.createElement('div');
+  div.className = 'entry-block';
+  if (type === 'experience' || type === 'projects') {
+    div.innerHTML = `
+      <button class="delete-entry" onclick="this.parentElement.remove();updateScore()">✕</button>
+      <div class="e-title" contenteditable="true" placeholder="Title">Title</div>
+      <div class="e-sub" contenteditable="true" placeholder="Organization">Organization · Location</div>
+      <div class="e-date" contenteditable="true" placeholder="Period">Start – End</div>
+      <div class="e-desc" contenteditable="true" placeholder="Description...">Description</div>
+    `;
+  } else {
+    div.innerHTML = `
+      <button class="delete-entry" onclick="this.parentElement.remove();updateScore()">✕</button>
+      <div class="e-title" contenteditable="true">Title</div>
+      <div class="e-sub" contenteditable="true">Subtitle</div>
+      <div class="e-date" contenteditable="true">Period</div>
+    `;
+  }
+  entries.appendChild(div);
+  div.querySelector('[contenteditable]').focus();
+}
+
+// ─── ADD SKILL ───
+function addSkill(btn) {
+  const cloud = btn.previousElementSibling;
+  const chip = document.createElement('span');
+  chip.className = 'skill-chip';
+  chip.contentEditable = true;
+  chip.style.color = accentColor;
+  chip.style.borderColor = accentColor + '40';
+  chip.style.background = accentColor + '18';
+  chip.textContent = 'New Skill';
+  cloud.appendChild(chip);
+  chip.focus();
+  // select all text
+  const range = document.createRange();
+  range.selectNodeContents(chip);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+}
+
+// ─── SECTION REORDERING ───
+function sectionDragStart(e) {
+  dragSrcEl = e.currentTarget;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.4';
+}
+function sectionDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const target = e.currentTarget;
+  if (target !== dragSrcEl && target.classList.contains('resume-section')) {
+    const body = document.getElementById('resume-body');
+    const srcIdx = [...body.children].indexOf(dragSrcEl);
+    const tgtIdx = [...body.children].indexOf(target);
+    if (srcIdx < tgtIdx) body.insertBefore(dragSrcEl, target.nextSibling);
+    else body.insertBefore(dragSrcEl, target);
+  }
+}
+function sectionDragEnd(e) {
+  dragSrcEl.style.opacity = '1';
+  dragSrcEl = null;
+}
+
+// ─── SECTION CONTROLS ───
+function moveSection(btn, dir) {
+  const section = btn.closest('.resume-section');
+  const body = section.parentElement;
+  if (dir === 'up' && section.previousElementSibling) {
+    body.insertBefore(section, section.previousElementSibling);
+  } else if (dir === 'down' && section.nextElementSibling) {
+    body.insertBefore(section.nextElementSibling, section);
+  }
+}
+function deleteSection(btn) {
+  const section = btn.closest('.resume-section');
+  if (confirm('Remove this section?')) {
+    section.remove();
+    updateScore();
+    showToast('Section removed');
+  }
+}
+
+// ─── COMPLETENESS SCORE ───
+function updateScore() {
+  let score = 0;
+  const name = document.querySelector('.resume-name')?.textContent.trim();
+  if (name && name.length > 2) score += 20;
+  const title = document.querySelector('.resume-title')?.textContent.trim();
+  if (title && title.length > 2) score += 10;
+  const contacts = document.querySelectorAll('.resume-contacts [contenteditable]');
+  let filledContacts = 0;
+  contacts.forEach(c => { if (c.textContent.trim().length > 3) filledContacts++; });
+  score += Math.min(filledContacts * 5, 15);
+  const sections = document.querySelectorAll('.resume-section');
+  score += Math.min(sections.length * 10, 40);
+  const descs = document.querySelectorAll('.e-desc');
+  let filledDescs = 0;
+  descs.forEach(d => { if (d.textContent.trim().length > 20) filledDescs++; });
+  score += Math.min(filledDescs * 5, 15);
+
+  score = Math.min(score, 100);
+  document.getElementById('prog-fill').style.width = score + '%';
+  document.getElementById('prog-label').textContent = score + '% complete';
+  document.getElementById('score-badge').textContent = '✦ Score: ' + score + '%';
+}
+
+// observe content changes
+const observer = new MutationObserver(updateScore);
+observer.observe(document.getElementById('resume-body'), { childList: true, subtree: true, characterData: true });
+
+// ─── EXPORT PDF ───
+function exportPDF() {
+  // Hide controls during export
+  document.querySelectorAll('.section-controls,.add-entry-btn,.add-skill-btn,.delete-entry').forEach(el => {
+    el.style.display = 'none';
+  });
+  showToast('Generating PDF…');
+  const element = document.getElementById('resume-paper');
+  const opt = {
+    margin: 0,
+    filename: 'resume-resumeforge.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff'
+    },
+    jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait' }
+  };
+  html2pdf().set(opt).from(element).save().then(() => {
+    // Restore controls
+    document.querySelectorAll('.section-controls').forEach(el => el.style.display = '');
+    document.querySelectorAll('.add-entry-btn').forEach(el => el.style.display = '');
+    document.querySelectorAll('.add-skill-btn').forEach(el => el.style.display = '');
+    showToast('PDF downloaded! 🎉');
+  });
+}
+
+// ─── SAVE / CLEAR ───
+function saveLocal() {
+  const data = {
+    html: document.getElementById('resume-paper').innerHTML,
+    template: currentTemplate,
+    accent: accentColor,
+    font: bodyFont
+  };
+  try {
+    // save to sessionStorage only (localStorage blocked in iframe env)
+    sessionStorage.setItem('resumeforge_data', JSON.stringify(data));
+    showToast('Progress saved! 💾');
+  } catch(e) {
+    showToast('Saved in memory (export PDF to preserve)', 'info');
+  }
+}
+
+function clearAll() {
+  if (confirm('Clear all content and start fresh?')) {
+    location.reload();
+  }
+}
+
+// ─── TOAST ───
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'warn' ? '#D97706' : '#0D9488';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── INIT ───
+document.addEventListener('DOMContentLoaded', () => {
+  applyAccent();
+  updateScore();
+  // Try restore
+  try {
+    const saved = sessionStorage.getItem('resumeforge_data');
+    if (saved) {
+      const d = JSON.parse(saved);
+      document.getElementById('resume-paper').innerHTML = d.html;
+      setTemplate(d.template || 'classic');
+    }
+  } catch(e) {}
+});
+</script>
+</body>
+</html>
